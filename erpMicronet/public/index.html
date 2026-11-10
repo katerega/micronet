@@ -1,0 +1,76 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>MICRONET AP Automation</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand"><div class="logo">M</div><div><b>MICRONET</b><span>AP AUTOMATION</span></div></div>
+    <nav>
+      <button class="nav active" data-view="dashboard">Dashboard</button>
+      <button class="nav" data-view="invoice">Process Invoice</button>
+      <button class="nav" data-view="po">Purchase Orders</button>
+      <button class="nav" data-view="reconcile">Reconciliation</button>
+      <button class="nav" data-view="settings">Connections</button>
+    </nav>
+    <div class="connection"><span id="tallyDot" class="dot"></span><span id="tallyStatus">Checking Tally…</span></div>
+  </aside>
+
+  <main>
+    <header><div><h1 id="title">AP Dashboard</h1><p id="subtitle">Invoice extraction, PO matching and Tally integration</p></div><button class="refresh" onclick="checkTally()">Refresh connection</button></header>
+
+    <section id="dashboard" class="view active">
+      <div class="cards">
+        <div class="card"><span>Invoices processed</span><strong id="processed">0</strong></div>
+        <div class="card"><span>Matched</span><strong id="matched">0</strong></div>
+        <div class="card"><span>Exceptions</span><strong id="exceptions">0</strong></div>
+        <div class="card"><span>Tally</span><strong id="tallyCard">—</strong></div>
+      </div>
+      <div class="panel">
+        <h2>Live workflow</h2>
+        <div class="pipeline"><i>Invoice</i><b>→</b><i>PDF extraction</i><b>→</b><i>AI</i><b>→</b><i>Tally PO</i><b>→</b><i>Reconcile</i><b>→</b><i>Post / Review</i></div>
+      </div>
+    </section>
+
+    <section id="invoice" class="view">
+      <div class="panel">
+        <h2>Process invoice</h2>
+        <p>Upload a PDF and send it through the active n8n invoice-processing webhook.</p>
+        <input id="invoiceFile" type="file" accept="application/pdf">
+        <button class="primary" onclick="processInvoice()">Process invoice</button>
+        <div id="invoiceResult" class="result hidden"></div>
+      </div>
+    </section>
+
+    <section id="po" class="view">
+      <div class="panel">
+        <h2>Purchase Order lookup</h2>
+        <div class="row"><input id="poNumber" placeholder="Enter PO number, e.g. PO-1001"><button class="primary" onclick="lookupPO()">Lookup in Tally</button></div>
+        <div id="poResult" class="result hidden"></div>
+      </div>
+    </section>
+
+    <section id="reconcile" class="view">
+      <div class="panel">
+        <h2>Manual reconciliation test</h2>
+        <p>Paste invoice and PO JSON to run the same reconciliation rules through the active backend API.</p>
+        <div class="grid2">
+          <textarea id="invoiceJson" placeholder='{"purchase_order_number":"PO-1001","vendor_name":"Supplier","line_items":[{"description":"Laptop","quantity":2,"unit_price":1000}]}'></textarea>
+          <textarea id="poJson" placeholder='{"purchaseOrderNumber":"PO-1001","vendor":"Supplier","lineItems":[{"description":"Laptop","quantity":2,"rate":1000}]}'></textarea>
+        </div>
+        <button class="primary" onclick="reconcile()">Reconcile</button>
+        <div id="reconcileResult" class="result hidden"></div>
+      </div>
+    </section>
+
+    <section id="settings" class="view">
+      <div class="panel"><h2>Live connections</h2><div id="config" class="config"></div></div>
+    </section>
+  </main>
+<script src="/app.js"></script>
+</body>
+</html>
