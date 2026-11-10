@@ -1,0 +1,104 @@
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: micronet
+      POSTGRES_USER: micronet_user
+      POSTGRES_PASSWORD: micronet_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U micronet_user -d micronet"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - micronet-network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - micronet-network
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    environment:
+      DEBUG: 'True'
+      DB_NAME: micronet
+      DB_USER: micronet_user
+      DB_PASSWORD: micronet_password
+      DB_HOST: postgres
+      DB_PORT: 5432
+      REDIS_URL: redis://redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:-django-insecure-*y3g8h8k3d7k3d7k3d7k3d7k3d7k3d7k}
+    volumes:
+      - ./backend:/app
+      - media_volume:/app/media
+      - static_volume:/app/staticfiles
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "
+        python manage.py migrate &&
+        python manage.py collectstatic --noinput &&
+        gunicorn micronet.wsgi:application --bind 0.0.0.0:8000 --workers=3
+      "
+    networks:
+      - micronet-network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000/api
+    depends_on:
+      - backend
+    command: npm run dev -- --host 0.0.0.0
+    networks:
+      - micronet-network
+
+  nginx:
+    image: nginx:alpine
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf
+      - static_volume:/staticfiles
+      - media_volume:/media
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - micronet-network
+
+volumes:
+  postgres_data:
+  media_volume:
+  static_volume:
+
+networks:
+  micronet-network:
+    driver: bridge
